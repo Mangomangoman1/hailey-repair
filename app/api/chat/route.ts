@@ -56,20 +56,26 @@ export async function POST(request: Request) {
     })
 
     // Build conversation history for Gemini
-    // Filter out leading assistant messages - Gemini requires user first
+    // Gemini requires first message to be from user, so filter properly
     const allMessages = messages.slice(0, -1)
-    let startIndex = 0
+    
+    // Find first user message index
+    let firstUserIndex = -1
     for (let i = 0; i < allMessages.length; i++) {
       if (allMessages[i].role === 'user') {
-        startIndex = i
+        firstUserIndex = i
         break
       }
     }
     
-    const history = allMessages.slice(startIndex).map((msg: { role: string; content: string }) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }))
+    // Only include history starting from first user message
+    // If no user message found, use empty history
+    const history = firstUserIndex >= 0 
+      ? allMessages.slice(firstUserIndex).map((msg: { role: string; content: string }) => ({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        }))
+      : []
 
     const chat = model.startChat({
       history,
