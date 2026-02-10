@@ -56,7 +56,17 @@ export async function POST(request: Request) {
     })
 
     // Build conversation history for Gemini
-    const history = messages.slice(0, -1).map((msg: { role: string; content: string }) => ({
+    // Filter out leading assistant messages - Gemini requires user first
+    const allMessages = messages.slice(0, -1)
+    let startIndex = 0
+    for (let i = 0; i < allMessages.length; i++) {
+      if (allMessages[i].role === 'user') {
+        startIndex = i
+        break
+      }
+    }
+    
+    const history = allMessages.slice(startIndex).map((msg: { role: string; content: string }) => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.content }]
     }))
