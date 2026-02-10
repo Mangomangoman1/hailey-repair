@@ -52,41 +52,31 @@ export async function POST(request: Request) {
     const genAI = new GoogleGenerativeAI(apiKey)
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-1.5-flash',
-      systemInstruction: SYSTEM_PROMPT,
     })
 
-    // Build conversation history for Gemini
-    // Gemini requires first message to be from user, so filter properly
-    const allMessages = messages.slice(0, -1)
+    // Build the full prompt with conversation context
+    // Skip assistant messages that aren't from actual AI responses
+    const userMessages = messages.filter((m: {role: string}) => m.role === 'user')
+    const lastUserMessage = userMessages[userMessages.length - 1]?.content || ''
     
-    // Find first user message index
-    let firstUserIndex = -1
-    for (let i = 0; i < allMessages.length; i++) {
-      if (allMessages[i].role === 'user') {
-        firstUserIndex = i
-        break
+    // Build conversation context from actual exchanges (skip initial greeting)
+    let conversationContext = ''
+    let foundFirstUser = false
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        foundFirstUser = true
+      }
+      if (foundFirstUser && messages.indexOf(msg) < messages.length - 1) {
+        const role = msg.role === 'user' ? 'Customer' : 'Tech Helper'
+        conversationContext += `${role}: ${msg.content}\n\n`
       }
     }
-    
-    // Only include history starting from first user message
-    // If no user message found, use empty history
-    const history = firstUserIndex >= 0 
-      ? allMessages.slice(firstUserIndex).map((msg: { role: string; content: string }) => ({
-          role: msg.role === 'user' ? 'user' : 'model',
-          parts: [{ text: msg.content }]
-        }))
-      : []
 
-    const chat = model.startChat({
-      history,
-      generationConfig: {
-        maxOutputTokens: 500,
-        temperature: 0.7,
-      }
-    })
+    const fullPrompt = conversationContext 
+      ? `${SYSTEM_PROMPT}\n\nConversation so far:\n${conversationContext}\nCustomer: ${lastUserMessage}\n\nTech Helper:`
+      : `${SYSTEM_PROMPT}\n\nCustomer: ${lastUserMessage}\n\nTech Helper:`
 
-    const lastMessage = messages[messages.length - 1].content
-    const result = await chat.sendMessage(lastMessage)
+    const result = await model.generateContent(fullPrompt)
     const response = result.response.text()
 
     return NextResponse.json({ message: response })
