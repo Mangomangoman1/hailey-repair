@@ -3,6 +3,10 @@
 */
 
 :root{
+  /* darker, higher-contrast navy (preview-like) */
+  --bg: #071121;
+  --bg-2: #0a1a30;
+
   --text: rgba(255,255,255,0.96);
   --muted: rgba(255,255,255,0.82);
   --muted-2: rgba(255,255,255,0.68);
@@ -12,7 +16,19 @@
 }
 
 html{ font-size: 17px; }
-body{ line-height: 1.62; }
+body{
+  line-height: 1.62;
+  /* override the base background to be a touch darker */
+  background:
+    radial-gradient(900px 450px at 10% -10%, rgba(0,188,212,0.18), transparent 55%),
+    radial-gradient(900px 420px at 90% 0%, rgba(91,231,255,0.14), transparent 52%),
+    radial-gradient(900px 560px at 40% 120%, rgba(0,188,212,0.10), transparent 58%),
+    linear-gradient(180deg, #050c18, var(--bg));
+}
+
+.site-header{
+  background: rgba(6,14,28,0.78);
+}
 
 /* Easier clicking / scanning */
 .nav a{
