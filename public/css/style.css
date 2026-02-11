@@ -141,6 +141,18 @@ a:hover{ text-decoration: underline; }
   border: 1px solid rgba(0,188,212,0.22);
 }
 
+/* Highlighted nav pill (e.g., Tech Helper) */
+.nav a.nav-pill{
+  background: rgba(0,188,212,0.16);
+  border: 1px solid rgba(0,188,212,0.38);
+  box-shadow: 0 10px 20px rgba(0,188,212,0.12);
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.nav a.nav-pill:hover{
+  background: rgba(0,188,212,0.22);
+}
+
 .header-cta{
   display:none;
 }

@@ -80,7 +80,7 @@ export default function RootLayout({
               <Link href="/contact">Contact</Link>
               <Link href="/faq">FAQ</Link>
               <Link href="/guide">Repair Guide</Link>
-              <Link href="/chat">Tech Help</Link>
+              <Link className="nav-pill" href="/chat">Tech Helper</Link>
             </nav>
 
             <div className="header-cta">
