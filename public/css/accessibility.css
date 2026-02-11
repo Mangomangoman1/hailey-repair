@@ -1,0 +1,42 @@
+/* Production: readability/contrast pass (ported from early GPT preview theme)
+   Goal: slightly larger type + higher contrast without changing layout.
+*/
+
+:root{
+  --text: rgba(255,255,255,0.96);
+  --muted: rgba(255,255,255,0.82);
+  --muted-2: rgba(255,255,255,0.68);
+  --line: rgba(255,255,255,0.14);
+  --card: rgba(255,255,255,0.055);
+  --focus: 0 0 0 4px rgba(0,188,212,0.26);
+}
+
+html{ font-size: 17px; }
+body{ line-height: 1.62; }
+
+/* Easier clicking / scanning */
+.nav a{
+  padding: 0.6rem 0.75rem;
+  font-weight: 750;
+  font-size: 1.02rem;
+}
+
+.btn{
+  padding: 0.72rem 1.0rem;
+  border-radius: 999px;
+  font-size: 1.02rem;
+}
+
+/* Extra emphasis on Tech Helper */
+.nav a.nav-pill{
+  background: rgba(0,188,212,0.20);
+  border: 1px solid rgba(0,188,212,0.55);
+  box-shadow: 0 12px 22px rgba(0,188,212,0.12);
+  font-weight: 800;
+}
+
+:focus-visible{ outline:none; box-shadow: var(--focus); border-radius: 12px; }
+
+@media (max-width: 760px){
+  .header-cta .btn{ padding: 0.62rem 0.85rem; }
+}
