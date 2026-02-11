@@ -87,7 +87,6 @@ export default function RootLayout({
 
             <div className="header-cta">
               <a className="btn" href="tel:+12084503730">Call</a>
-              <Link className="btn btn-primary" href="/chat">Tech Helper</Link>
             </div>
           </div>
         </header>
