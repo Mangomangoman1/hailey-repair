@@ -466,8 +466,12 @@ textarea{ min-height: 160px; resize: vertical; }
 }
 
 /* Animations on scroll */
-.reveal{ opacity: 0; transform: translateY(14px); }
-.reveal.is-visible{ opacity: 1; transform: translateY(0); transition: opacity 650ms ease, transform 650ms ease; }
+/* Reveal-on-scroll animations were JS-driven in the static site.
+   In the Next.js version we default to visible so mobile doesn't render blank content
+   if the reveal JS isn't running.
+*/
+.reveal{ opacity: 1; transform: none; }
+.reveal.is-visible{ transition: opacity 650ms ease, transform 650ms ease; }
 
 /* Responsive */
 @media (max-width: 900px){
