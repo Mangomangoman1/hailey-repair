@@ -30,7 +30,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="/css/style.css" />
+        {/* cache-bust stylesheet so nav pill changes propagate immediately */}
+        <link rel="stylesheet" href="/css/style.css?v=2026-02-11" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
