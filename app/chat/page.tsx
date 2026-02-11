@@ -17,6 +17,7 @@ export default function Chat() {
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const MAX_USER_MESSAGES = 50
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -30,6 +31,15 @@ export default function Chat() {
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || loading) return
+
+    const userMsgCount = messages.filter(m => m.role === 'user').length
+    if (userMsgCount >= MAX_USER_MESSAGES) {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "You've hit the chat limit for this session. If you still need help, please call or text Sam at (208) 450-3730."
+      }])
+      return
+    }
 
     const userMessage = input.trim()
     setInput('')

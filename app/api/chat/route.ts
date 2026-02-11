@@ -36,55 +36,110 @@ Don't diagnose hardware you can't verify, don't upsell, and if unsure say "Sam w
 
 Local Context: You serve Hailey, Ketchum, Sun Valley, and the Wood River Valley. Sam does repairs and tech support, open 7 days a week.`
 
+const MODEL_ID = 'gemini-2.0-flash'
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms))
+}
+
+function jitter(ms: number) {
+  return Math.floor(ms * (0.6 + Math.random() * 0.8))
+}
+
 export async function POST(request: Request) {
   try {
     const { messages } = await request.json()
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-      console.error('GEMINI_API_KEY not found in environment')
+    // basic abuse guard: don't allow endless chats per page load
+    const userCount = Array.isArray(messages)
+      ? messages.filter((m: any) => m?.role === 'user').length
+      : 0
+    if (userCount > 50) {
       return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
+        {
+          message:
+            "You've hit the chat limit for this session. If you still need help, please call or text Sam at (208) 450-3730."
+        },
+        { status: 200 }
       )
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.0-flash',
-    })
-
-    // Build the full prompt with conversation context
-    // Skip assistant messages that aren't from actual AI responses
-    const userMessages = messages.filter((m: {role: string}) => m.role === 'user')
-    const lastUserMessage = userMessages[userMessages.length - 1]?.content || ''
-    
-    // Build conversation context from actual exchanges (skip initial greeting)
-    let conversationContext = ''
-    let foundFirstUser = false
-    for (const msg of messages) {
-      if (msg.role === 'user') {
-        foundFirstUser = true
-      }
-      if (foundFirstUser && messages.indexOf(msg) < messages.length - 1) {
-        const role = msg.role === 'user' ? 'Customer' : 'Tech Helper'
-        conversationContext += `${role}: ${msg.content}\n\n`
-      }
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      console.error('GEMINI_API_KEY not found in environment')
+      return NextResponse.json({ error: 'API key not configured' }, { status: 500 })
     }
 
-    const fullPrompt = conversationContext 
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: MODEL_ID })
+
+    // Build prompt: keep only recent context to reduce load + avoid rate limiting
+    const userMessages = messages.filter((m: any) => m?.role === 'user')
+    const lastUserMessage = userMessages[userMessages.length - 1]?.content || ''
+
+    // Keep last N turns (user+assistant pairs) after the first user message
+    const MAX_CONTEXT_MESSAGES = 12 // ~6 turns
+    const trimmed = messages.slice(-MAX_CONTEXT_MESSAGES)
+
+    let conversationContext = ''
+    let foundFirstUser = false
+    for (let i = 0; i < trimmed.length; i++) {
+      const msg = trimmed[i]
+      if (msg.role === 'user') foundFirstUser = true
+      if (!foundFirstUser) continue
+      if (i === trimmed.length - 1) break // exclude last user message, added separately
+      const role = msg.role === 'user' ? 'Customer' : 'Tech Helper'
+      conversationContext += `${role}: ${msg.content}\n\n`
+    }
+
+    const fullPrompt = conversationContext
       ? `${SYSTEM_PROMPT}\n\nConversation so far:\n${conversationContext}\nCustomer: ${lastUserMessage}\n\nTech Helper:`
       : `${SYSTEM_PROMPT}\n\nCustomer: ${lastUserMessage}\n\nTech Helper:`
 
-    const result = await model.generateContent(fullPrompt)
-    const response = result.response.text()
+    // Automatic retry on transient 429s
+    const maxAttempts = 2
+    let lastErr: any = null
 
-    return NextResponse.json({ message: response })
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const result = await model.generateContent(fullPrompt)
+        const response = result.response.text()
+        return NextResponse.json({ message: response })
+      } catch (err: any) {
+        lastErr = err
+        const status = err?.status || err?.response?.status
+
+        // Retry once on rate limiting / resource exhaustion
+        if (status === 429 && attempt < maxAttempts) {
+          await sleep(jitter(1100))
+          continue
+        }
+        break
+      }
+    }
+
+    console.error('Chat API error:', lastErr)
+
+    // If it's a 429 even after retry, return a friendly message (still 200 for UI simplicity)
+    if (lastErr?.status === 429) {
+      return NextResponse.json(
+        {
+          message:
+            "I'm a little overloaded right now. Please try again in a few seconds—or call/text Sam at (208) 450-3730 and he'll help you directly."
+        },
+        { status: 200 }
+      )
+    }
+
+    return NextResponse.json(
+      { message: 'Sorry — something went wrong. Please call or text Sam at (208) 450-3730.' },
+      { status: 200 }
+    )
   } catch (error) {
     console.error('Chat API error:', error)
     return NextResponse.json(
-      { error: 'Failed to process message', details: String(error) },
-      { status: 500 }
+      { message: 'Sorry — something went wrong. Please call or text Sam at (208) 450-3730.' },
+      { status: 200 }
     )
   }
 }
