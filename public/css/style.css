@@ -154,7 +154,9 @@ a:hover{ text-decoration: underline; }
 }
 
 .header-cta{
-  display:none;
+  display:flex;
+  align-items:center;
+  gap: 0.6rem;
 }
 
 .btn{
@@ -487,6 +489,10 @@ textarea{ min-height: 160px; resize: vertical; }
   .mobile-panel.is-open{ display:block; }
   .brand{ min-width: 0; }
   .form-grid{ grid-template-columns: 1fr; }
+
+  /* keep CTAs visible on mobile */
+  .header-cta{ display:flex; }
+  .header-cta .btn{ padding: 0.55rem 0.7rem; border-radius: 999px; }
 }
 
 /* Reduced motion */
