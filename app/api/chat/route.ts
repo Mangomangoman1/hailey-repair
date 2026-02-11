@@ -42,8 +42,8 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-function jitter(ms: number) {
-  return Math.floor(ms * (0.6 + Math.random() * 0.8))
+function jitterRange(minMs: number, maxMs: number) {
+  return Math.floor(minMs + Math.random() * (maxMs - minMs))
 }
 
 export async function POST(request: Request) {
@@ -71,14 +71,17 @@ export async function POST(request: Request) {
     }
 
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: MODEL_ID })
+    const model = genAI.getGenerativeModel({
+      model: MODEL_ID,
+      systemInstruction: SYSTEM_PROMPT,
+    })
 
     // Build prompt: keep only recent context to reduce load + avoid rate limiting
     const userMessages = messages.filter((m: any) => m?.role === 'user')
     const lastUserMessage = userMessages[userMessages.length - 1]?.content || ''
 
-    // Keep last N turns (user+assistant pairs) after the first user message
-    const MAX_CONTEXT_MESSAGES = 12 // ~6 turns
+    // Keep last N messages (roughly N/2 turns)
+    const MAX_CONTEXT_MESSAGES = 8 // ~4 turns
     const trimmed = messages.slice(-MAX_CONTEXT_MESSAGES)
 
     let conversationContext = ''
@@ -93,8 +96,8 @@ export async function POST(request: Request) {
     }
 
     const fullPrompt = conversationContext
-      ? `${SYSTEM_PROMPT}\n\nConversation so far:\n${conversationContext}\nCustomer: ${lastUserMessage}\n\nTech Helper:`
-      : `${SYSTEM_PROMPT}\n\nCustomer: ${lastUserMessage}\n\nTech Helper:`
+      ? `Conversation so far:\n${conversationContext}\nCustomer: ${lastUserMessage}\n\nTech Helper:`
+      : `Customer: ${lastUserMessage}\n\nTech Helper:`
 
     // Automatic retry on transient 429s
     const maxAttempts = 2
@@ -111,7 +114,8 @@ export async function POST(request: Request) {
 
         // Retry once on rate limiting / resource exhaustion
         if (status === 429 && attempt < maxAttempts) {
-          await sleep(jitter(1100))
+          // back off a bit longer; short jitter reduces user-visible failures
+          await sleep(jitterRange(1500, 2500))
           continue
         }
         break
